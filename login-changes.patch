@@ -1,0 +1,845 @@
+diff --git a/build.gradle b/build.gradle
+index eb68c28..55449b0 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -22,6 +22,7 @@ dependencies {
+ 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+ 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+ 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
++	implementation 'org.springframework.security:spring-security-crypto'
+ 	compileOnly 'org.projectlombok:lombok'
+ 	runtimeOnly 'com.h2database:h2'
+ 	annotationProcessor 'org.projectlombok:lombok'
+diff --git a/frontend/src/App.css b/frontend/src/App.css
+index b9d355d..56bf022 100644
+--- a/frontend/src/App.css
++++ b/frontend/src/App.css
+@@ -1,42 +1,108 @@
+ #root {
+-  max-width: 1280px;
+-  margin: 0 auto;
++  width: 100%;
++  padding: 1rem;
++  display: flex;
++  justify-content: center;
++}
++
++.auth-card {
++  width: 100%;
++  max-width: 400px;
++  background: #fff;
++  border-radius: 12px;
+   padding: 2rem;
+-  text-align: center;
++  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
++}
++
++.auth-card h1 {
++  margin: 0;
++  font-size: 1.6rem;
++}
++
++.subtitle {
++  margin: 0.25rem 0 1.5rem;
++  color: #6b7280;
++}
++
++form {
++  display: flex;
++  flex-direction: column;
++}
++
++label {
++  font-size: 0.9rem;
++  font-weight: 500;
++  margin-bottom: 0.3rem;
++}
++
++input {
++  font: inherit;
++  padding: 0.6rem 0.75rem;
++  border: 1px solid #d1d5db;
++  border-radius: 8px;
++  margin-bottom: 1rem;
++}
++
++input:focus {
++  outline: 2px solid #4f46e5;
++  border-color: transparent;
++}
++
++button {
++  font: inherit;
++  cursor: pointer;
++}
++
++button.primary {
++  width: 100%;
++  padding: 0.7rem;
++  border: none;
++  border-radius: 8px;
++  background: #4f46e5;
++  color: #fff;
++  font-weight: 600;
++}
++
++button.primary:hover:not(:disabled) {
++  background: #4338ca;
+ }
+ 
+-.logo {
+-  height: 6em;
+-  padding: 1.5em;
+-  will-change: filter;
+-  transition: filter 300ms;
++button.primary:disabled {
++  opacity: 0.6;
++  cursor: wait;
+ }
+-.logo:hover {
+-  filter: drop-shadow(0 0 2em #646cffaa);
++
++button.link {
++  border: none;
++  background: none;
++  padding: 0;
++  color: #4f46e5;
++  font-weight: 600;
+ }
+-.logo.react:hover {
+-  filter: drop-shadow(0 0 2em #61dafbaa);
++
++button.link:hover {
++  text-decoration: underline;
+ }
+ 
+-@keyframes logo-spin {
+-  from {
+-    transform: rotate(0deg);
+-  }
+-  to {
+-    transform: rotate(360deg);
+-  }
++.switch {
++  margin: 1.25rem 0 0;
++  text-align: center;
++  font-size: 0.9rem;
+ }
+ 
+-@media (prefers-reduced-motion: no-preference) {
+-  a:nth-of-type(2) .logo {
+-    animation: logo-spin infinite 20s linear;
+-  }
++.alert {
++  padding: 0.6rem 0.75rem;
++  border-radius: 8px;
++  margin-bottom: 1rem;
++  font-size: 0.9rem;
+ }
+ 
+-.card {
+-  padding: 2em;
++.alert.error {
++  background: #fef2f2;
++  color: #b91c1c;
+ }
+ 
+-.read-the-docs {
+-  color: #888;
++.alert.success {
++  background: #f0fdf4;
++  color: #15803d;
+ }
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index b8b8473..982918f 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -1,34 +1,53 @@
+ import { useState } from 'react'
+-import reactLogo from './assets/react.svg'
+-import viteLogo from '/vite.svg'
++import Login from './components/Login'
++import Registro from './components/Registro'
++import Inicio from './components/Inicio'
++import { getUsuarioActual, logout } from './services/authService'
+ import './App.css'
+ 
+ function App() {
+-  const [count, setCount] = useState(0)
++  const [usuario, setUsuario] = useState(getUsuarioActual)
++  const [vista, setVista] = useState('login')
++  const [mensaje, setMensaje] = useState('')
++
++  if (usuario) {
++    return (
++      <Inicio
++        usuario={usuario}
++        onLogout={() => {
++          logout()
++          setUsuario(null)
++          setVista('login')
++        }}
++      />
++    )
++  }
++
++  if (vista === 'registro') {
++    return (
++      <Registro
++        onRegistrado={() => {
++          setMensaje('Cuenta creada. Ya puedes iniciar sesión.')
++          setVista('login')
++        }}
++        onIrALogin={() => setVista('login')}
++      />
++    )
++  }
+ 
+   return (
+-    <>
+-      <div>
+-        <a href="https://vitejs.dev" target="_blank">
+-          <img src={viteLogo} className="logo" alt="Vite logo" />
+-        </a>
+-        <a href="https://react.dev" target="_blank">
+-          <img src={reactLogo} className="logo react" alt="React logo" />
+-        </a>
+-      </div>
+-      <h1>Vite + React</h1>
+-      <div className="card">
+-        <button onClick={() => setCount((count) => count + 1)}>
+-          count is {count}
+-        </button>
+-        <p>
+-          Edit <code>src/App.jsx</code> and save to test HMR
+-        </p>
+-      </div>
+-      <p className="read-the-docs">
+-        Click on the Vite and React logos to learn more
+-      </p>
+-    </>
++    <Login
++      key={mensaje}
++      mensajeInicial={mensaje}
++      onLogin={(u) => {
++        setMensaje('')
++        setUsuario(u)
++      }}
++      onIrARegistro={() => {
++        setMensaje('')
++        setVista('registro')
++      }}
++    />
+   )
+ }
+ 
+diff --git a/frontend/src/components/Inicio.jsx b/frontend/src/components/Inicio.jsx
+new file mode 100644
+index 0000000..ce4c79c
+--- /dev/null
++++ b/frontend/src/components/Inicio.jsx
+@@ -0,0 +1,12 @@
++export default function Inicio({ usuario, onLogout }) {
++  return (
++    <div className="auth-card">
++      <h1>Hola, {usuario.nombre}</h1>
++      <p className="subtitle">Has iniciado sesión como {usuario.email}</p>
++      <p>Aquí irá tu panel de gastos.</p>
++      <button type="button" className="primary" onClick={onLogout}>
++        Cerrar sesión
++      </button>
++    </div>
++  )
++}
+diff --git a/frontend/src/components/Login.jsx b/frontend/src/components/Login.jsx
+new file mode 100644
+index 0000000..ea9813e
+--- /dev/null
++++ b/frontend/src/components/Login.jsx
+@@ -0,0 +1,66 @@
++import { useState } from 'react'
++import { login } from '../services/authService'
++
++export default function Login({ onLogin, onIrARegistro, mensajeInicial }) {
++  const [email, setEmail] = useState('')
++  const [password, setPassword] = useState('')
++  const [error, setError] = useState('')
++  const [cargando, setCargando] = useState(false)
++
++  async function handleSubmit(e) {
++    e.preventDefault()
++    setError('')
++    setCargando(true)
++    try {
++      const usuario = await login(email, password)
++      onLogin(usuario)
++    } catch (err) {
++      setError(err.message)
++    } finally {
++      setCargando(false)
++    }
++  }
++
++  return (
++    <div className="auth-card">
++      <h1>Gestión de Gastos</h1>
++      <p className="subtitle">Inicia sesión en tu cuenta</p>
++
++      {mensajeInicial && <div className="alert success">{mensajeInicial}</div>}
++      {error && <div className="alert error" role="alert">{error}</div>}
++
++      <form onSubmit={handleSubmit}>
++        <label htmlFor="email">Email</label>
++        <input
++          id="email"
++          type="email"
++          autoComplete="email"
++          value={email}
++          onChange={(e) => setEmail(e.target.value)}
++          required
++        />
++
++        <label htmlFor="password">Contraseña</label>
++        <input
++          id="password"
++          type="password"
++          autoComplete="current-password"
++          value={password}
++          onChange={(e) => setPassword(e.target.value)}
++          required
++        />
++
++        <button type="submit" className="primary" disabled={cargando}>
++          {cargando ? 'Entrando…' : 'Iniciar sesión'}
++        </button>
++      </form>
++
++      <p className="switch">
++        ¿No tienes cuenta?{' '}
++        <button type="button" className="link" onClick={onIrARegistro}>
++          Regístrate
++        </button>
++      </p>
++    </div>
++  )
++}
+diff --git a/frontend/src/components/Registro.jsx b/frontend/src/components/Registro.jsx
+new file mode 100644
+index 0000000..39898be
+--- /dev/null
++++ b/frontend/src/components/Registro.jsx
+@@ -0,0 +1,94 @@
++import { useState } from 'react'
++import { registrar } from '../services/authService'
++
++export default function Registro({ onRegistrado, onIrALogin }) {
++  const [nombre, setNombre] = useState('')
++  const [email, setEmail] = useState('')
++  const [password, setPassword] = useState('')
++  const [confirmar, setConfirmar] = useState('')
++  const [error, setError] = useState('')
++  const [cargando, setCargando] = useState(false)
++
++  async function handleSubmit(e) {
++    e.preventDefault()
++    setError('')
++    if (password.length < 6) {
++      setError('La contraseña debe tener al menos 6 caracteres')
++      return
++    }
++    if (password !== confirmar) {
++      setError('Las contraseñas no coinciden')
++      return
++    }
++    setCargando(true)
++    try {
++      await registrar(nombre, email, password)
++      onRegistrado()
++    } catch (err) {
++      setError(err.message)
++    } finally {
++      setCargando(false)
++    }
++  }
++
++  return (
++    <div className="auth-card">
++      <h1>Crear cuenta</h1>
++      <p className="subtitle">Empieza a controlar tus gastos</p>
++
++      {error && <div className="alert error" role="alert">{error}</div>}
++
++      <form onSubmit={handleSubmit}>
++        <label htmlFor="nombre">Nombre</label>
++        <input
++          id="nombre"
++          autoComplete="name"
++          value={nombre}
++          onChange={(e) => setNombre(e.target.value)}
++          required
++        />
++
++        <label htmlFor="email">Email</label>
++        <input
++          id="email"
++          type="email"
++          autoComplete="email"
++          value={email}
++          onChange={(e) => setEmail(e.target.value)}
++          required
++        />
++
++        <label htmlFor="password">Contraseña</label>
++        <input
++          id="password"
++          type="password"
++          autoComplete="new-password"
++          value={password}
++          onChange={(e) => setPassword(e.target.value)}
++          required
++        />
++
++        <label htmlFor="confirmar">Repite la contraseña</label>
++        <input
++          id="confirmar"
++          type="password"
++          autoComplete="new-password"
++          value={confirmar}
++          onChange={(e) => setConfirmar(e.target.value)}
++          required
++        />
++
++        <button type="submit" className="primary" disabled={cargando}>
++          {cargando ? 'Creando cuenta…' : 'Registrarme'}
++        </button>
++      </form>
++
++      <p className="switch">
++        ¿Ya tienes cuenta?{' '}
++        <button type="button" className="link" onClick={onIrALogin}>
++          Inicia sesión
++        </button>
++      </p>
++    </div>
++  )
++}
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index 6119ad9..633b3a1 100644
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -1,68 +1,21 @@
+ :root {
+   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+   line-height: 1.5;
+-  font-weight: 400;
+-
+-  color-scheme: light dark;
+-  color: rgba(255, 255, 255, 0.87);
+-  background-color: #242424;
+-
++  color: #1f2937;
++  background-color: #f3f4f6;
+   font-synthesis: none;
+   text-rendering: optimizeLegibility;
+   -webkit-font-smoothing: antialiased;
+-  -moz-osx-font-smoothing: grayscale;
+ }
+ 
+-a {
+-  font-weight: 500;
+-  color: #646cff;
+-  text-decoration: inherit;
+-}
+-a:hover {
+-  color: #535bf2;
++* {
++  box-sizing: border-box;
+ }
+ 
+ body {
+   margin: 0;
+-  display: flex;
+-  place-items: center;
+-  min-width: 320px;
+   min-height: 100vh;
+-}
+-
+-h1 {
+-  font-size: 3.2em;
+-  line-height: 1.1;
+-}
+-
+-button {
+-  border-radius: 8px;
+-  border: 1px solid transparent;
+-  padding: 0.6em 1.2em;
+-  font-size: 1em;
+-  font-weight: 500;
+-  font-family: inherit;
+-  background-color: #1a1a1a;
+-  cursor: pointer;
+-  transition: border-color 0.25s;
+-}
+-button:hover {
+-  border-color: #646cff;
+-}
+-button:focus,
+-button:focus-visible {
+-  outline: 4px auto -webkit-focus-ring-color;
+-}
+-
+-@media (prefers-color-scheme: light) {
+-  :root {
+-    color: #213547;
+-    background-color: #ffffff;
+-  }
+-  a:hover {
+-    color: #747bff;
+-  }
+-  button {
+-    background-color: #f9f9f9;
+-  }
++  display: flex;
++  align-items: center;
++  justify-content: center;
+ }
+diff --git a/frontend/src/services/authService.js b/frontend/src/services/authService.js
+new file mode 100644
+index 0000000..a4fb2b3
+--- /dev/null
++++ b/frontend/src/services/authService.js
+@@ -0,0 +1,42 @@
++const API_URL = '/api/v1/auth'
++const STORAGE_KEY = 'usuario'
++
++async function post(path, body) {
++  let res
++  try {
++    res = await fetch(`${API_URL}${path}`, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify(body),
++    })
++  } catch {
++    throw new Error('No se pudo conectar con el servidor')
++  }
++  const data = await res.json().catch(() => ({}))
++  if (!res.ok) {
++    throw new Error(data.mensaje || 'Ha ocurrido un error, inténtalo de nuevo')
++  }
++  return data
++}
++
++export async function login(email, password) {
++  const usuario = await post('/login', { email, password })
++  localStorage.setItem(STORAGE_KEY, JSON.stringify(usuario))
++  return usuario
++}
++
++export function registrar(nombre, email, password) {
++  return post('/registro', { nombre, email, password })
++}
++
++export function logout() {
++  localStorage.removeItem(STORAGE_KEY)
++}
++
++export function getUsuarioActual() {
++  try {
++    return JSON.parse(localStorage.getItem(STORAGE_KEY))
++  } catch {
++    return null
++  }
++}
+diff --git a/frontend/vite.config.js b/frontend/vite.config.js
+index 5a33944..5346fcb 100644
+--- a/frontend/vite.config.js
++++ b/frontend/vite.config.js
+@@ -4,4 +4,10 @@ import react from '@vitejs/plugin-react'
+ // https://vitejs.dev/config/
+ export default defineConfig({
+   plugins: [react()],
++  server: {
++    // Redirige /api al backend de Spring Boot durante el desarrollo
++    proxy: {
++      '/api': 'http://localhost:8080',
++    },
++  },
+ })
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/controller/AuthController.java b/src/main/java/com/coding/crud/gestion_gastos/controller/AuthController.java
+new file mode 100644
+index 0000000..a776f7b
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/controller/AuthController.java
+@@ -0,0 +1,32 @@
++package com.coding.crud.gestion_gastos.controller;
++
++import com.coding.crud.gestion_gastos.dto.LoginRequestDTO;
++import com.coding.crud.gestion_gastos.dto.RegistroRequestDTO;
++import com.coding.crud.gestion_gastos.dto.UsuarioDTO;
++import com.coding.crud.gestion_gastos.service.AuthService;
++import jakarta.validation.Valid;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.annotation.*;
++
++@RestController
++@RequestMapping("/api/v1/auth")
++@CrossOrigin(origins = "http://localhost:5173")
++public class AuthController {
++
++    private final AuthService authService;
++
++    public AuthController(AuthService authService) {
++        this.authService = authService;
++    }
++
++    @PostMapping("/registro")
++    public ResponseEntity<UsuarioDTO> registrar(@Valid @RequestBody RegistroRequestDTO request) {
++        return new ResponseEntity<>(authService.registrar(request), HttpStatus.CREATED);
++    }
++
++    @PostMapping("/login")
++    public ResponseEntity<UsuarioDTO> login(@Valid @RequestBody LoginRequestDTO request) {
++        return ResponseEntity.ok(authService.login(request));
++    }
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/dto/LoginRequestDTO.java b/src/main/java/com/coding/crud/gestion_gastos/dto/LoginRequestDTO.java
+new file mode 100644
+index 0000000..f272281
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/dto/LoginRequestDTO.java
+@@ -0,0 +1,16 @@
++package com.coding.crud.gestion_gastos.dto;
++
++import jakarta.validation.constraints.Email;
++import jakarta.validation.constraints.NotBlank;
++import lombok.Data;
++
++@Data
++public class LoginRequestDTO {
++
++    @NotBlank(message = "El email es obligatorio")
++    @Email(message = "El email no es válido")
++    private String email;
++
++    @NotBlank(message = "La contraseña es obligatoria")
++    private String password;
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/dto/RegistroRequestDTO.java b/src/main/java/com/coding/crud/gestion_gastos/dto/RegistroRequestDTO.java
+new file mode 100644
+index 0000000..a3382b7
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/dto/RegistroRequestDTO.java
+@@ -0,0 +1,22 @@
++package com.coding.crud.gestion_gastos.dto;
++
++import jakarta.validation.constraints.Email;
++import jakarta.validation.constraints.NotBlank;
++import jakarta.validation.constraints.Size;
++import lombok.Data;
++
++@Data
++public class RegistroRequestDTO {
++
++    @NotBlank(message = "El nombre es obligatorio")
++    @Size(max = 100, message = "El nombre no puede exceder 100 caracteres")
++    private String nombre;
++
++    @NotBlank(message = "El email es obligatorio")
++    @Email(message = "El email no es válido")
++    private String email;
++
++    @NotBlank(message = "La contraseña es obligatoria")
++    @Size(min = 6, max = 72, message = "La contraseña debe tener entre 6 y 72 caracteres")
++    private String password;
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/dto/UsuarioDTO.java b/src/main/java/com/coding/crud/gestion_gastos/dto/UsuarioDTO.java
+new file mode 100644
+index 0000000..0fcce50
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/dto/UsuarioDTO.java
+@@ -0,0 +1,12 @@
++package com.coding.crud.gestion_gastos.dto;
++
++import lombok.AllArgsConstructor;
++import lombok.Data;
++
++@Data
++@AllArgsConstructor
++public class UsuarioDTO {
++    private Long id;
++    private String nombre;
++    private String email;
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/exception/AuthException.java b/src/main/java/com/coding/crud/gestion_gastos/exception/AuthException.java
+new file mode 100644
+index 0000000..3afafc1
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/exception/AuthException.java
+@@ -0,0 +1,14 @@
++package com.coding.crud.gestion_gastos.exception;
++
++import lombok.Getter;
++import org.springframework.http.HttpStatus;
++
++@Getter
++public class AuthException extends RuntimeException {
++    private final HttpStatus status;
++
++    public AuthException(HttpStatus status, String message) {
++        super(message);
++        this.status = status;
++    }
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/exception/GlobalExceptionHandler.java b/src/main/java/com/coding/crud/gestion_gastos/exception/GlobalExceptionHandler.java
+new file mode 100644
+index 0000000..bbc05da
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/exception/GlobalExceptionHandler.java
+@@ -0,0 +1,27 @@
++package com.coding.crud.gestion_gastos.exception;
++
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.web.bind.MethodArgumentNotValidException;
++import org.springframework.web.bind.annotation.ExceptionHandler;
++import org.springframework.web.bind.annotation.RestControllerAdvice;
++
++import java.util.Map;
++
++@RestControllerAdvice
++public class GlobalExceptionHandler {
++
++    @ExceptionHandler(AuthException.class)
++    public ResponseEntity<Map<String, String>> handleAuth(AuthException ex) {
++        return ResponseEntity.status(ex.getStatus()).body(Map.of("mensaje", ex.getMessage()));
++    }
++
++    @ExceptionHandler(MethodArgumentNotValidException.class)
++    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
++        String mensaje = ex.getBindingResult().getFieldErrors().stream()
++                .map(e -> e.getDefaultMessage())
++                .findFirst()
++                .orElse("Datos no válidos");
++        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("mensaje", mensaje));
++    }
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/model/Usuario.java b/src/main/java/com/coding/crud/gestion_gastos/model/Usuario.java
+new file mode 100644
+index 0000000..df1ed08
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/model/Usuario.java
+@@ -0,0 +1,23 @@
++package com.coding.crud.gestion_gastos.model;
++
++import jakarta.persistence.*;
++import lombok.Data;
++
++@Entity
++@Table(name = "usuarios")
++@Data
++public class Usuario {
++    @Id
++    @GeneratedValue(strategy = GenerationType.IDENTITY)
++    private Long id;
++
++    @Column(nullable = false)
++    private String nombre;
++
++    @Column(nullable = false, unique = true)
++    private String email;
++
++    // Hash BCrypt, nunca la contraseña en texto plano
++    @Column(nullable = false)
++    private String password;
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/repository/UsuarioRepository.java b/src/main/java/com/coding/crud/gestion_gastos/repository/UsuarioRepository.java
+new file mode 100644
+index 0000000..532a1f8
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/repository/UsuarioRepository.java
+@@ -0,0 +1,13 @@
++package com.coding.crud.gestion_gastos.repository;
++
++import com.coding.crud.gestion_gastos.model.Usuario;
++import org.springframework.data.jpa.repository.JpaRepository;
++import org.springframework.stereotype.Repository;
++
++import java.util.Optional;
++
++@Repository
++public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
++    Optional<Usuario> findByEmailIgnoreCase(String email);
++    boolean existsByEmailIgnoreCase(String email);
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/service/AuthService.java b/src/main/java/com/coding/crud/gestion_gastos/service/AuthService.java
+new file mode 100644
+index 0000000..13f6fe7
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/service/AuthService.java
+@@ -0,0 +1,10 @@
++package com.coding.crud.gestion_gastos.service;
++
++import com.coding.crud.gestion_gastos.dto.LoginRequestDTO;
++import com.coding.crud.gestion_gastos.dto.RegistroRequestDTO;
++import com.coding.crud.gestion_gastos.dto.UsuarioDTO;
++
++public interface AuthService {
++    UsuarioDTO registrar(RegistroRequestDTO request);
++    UsuarioDTO login(LoginRequestDTO request);
++}
+diff --git a/src/main/java/com/coding/crud/gestion_gastos/service/AuthServiceImpl.java b/src/main/java/com/coding/crud/gestion_gastos/service/AuthServiceImpl.java
+new file mode 100644
+index 0000000..22ea966
+--- /dev/null
++++ b/src/main/java/com/coding/crud/gestion_gastos/service/AuthServiceImpl.java
+@@ -0,0 +1,48 @@
++package com.coding.crud.gestion_gastos.service;
++
++import com.coding.crud.gestion_gastos.dto.LoginRequestDTO;
++import com.coding.crud.gestion_gastos.dto.RegistroRequestDTO;
++import com.coding.crud.gestion_gastos.dto.UsuarioDTO;
++import com.coding.crud.gestion_gastos.exception.AuthException;
++import com.coding.crud.gestion_gastos.model.Usuario;
++import com.coding.crud.gestion_gastos.repository.UsuarioRepository;
++import org.springframework.http.HttpStatus;
++import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
++import org.springframework.stereotype.Service;
++
++@Service
++public class AuthServiceImpl implements AuthService {
++
++    private final UsuarioRepository usuarioRepository;
++    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
++
++    public AuthServiceImpl(UsuarioRepository usuarioRepository) {
++        this.usuarioRepository = usuarioRepository;
++    }
++
++    @Override
++    public UsuarioDTO registrar(RegistroRequestDTO request) {
++        String email = request.getEmail().trim().toLowerCase();
++        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
++            throw new AuthException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese email");
++        }
++        Usuario usuario = new Usuario();
++        usuario.setNombre(request.getNombre().trim());
++        usuario.setEmail(email);
++        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
++        return toDTO(usuarioRepository.save(usuario));
++    }
++
++    @Override
++    public UsuarioDTO login(LoginRequestDTO request) {
++        // Mismo mensaje si el email no existe o la contraseña falla, para no revelar qué cuentas existen
++        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(request.getEmail().trim())
++                .filter(u -> passwordEncoder.matches(request.getPassword(), u.getPassword()))
++                .orElseThrow(() -> new AuthException(HttpStatus.UNAUTHORIZED, "Email o contraseña incorrectos"));
++        return toDTO(usuario);
++    }
++
++    private UsuarioDTO toDTO(Usuario u) {
++        return new UsuarioDTO(u.getId(), u.getNombre(), u.getEmail());
++    }
++}
