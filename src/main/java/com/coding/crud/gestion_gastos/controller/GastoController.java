@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/gastos")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(originPatterns = "http://localhost:*")
 public class GastoController {
 
     private final GastoService gastoService;

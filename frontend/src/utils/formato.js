@@ -8,6 +8,17 @@ const eurosCompacto = new Intl.NumberFormat('es-ES', {
 
 export const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
+const nombresMes = new Intl.DateTimeFormat('es-ES', { month: 'long' })
+
+// mes de 1 a 12
+export function nombreMes(mes) {
+  return nombresMes.format(new Date(2000, mes - 1, 1))
+}
+
+export function formatoPorcentaje(parte, total) {
+  return total ? `${((parte / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %` : '0 %'
+}
+
 export function formatoEuros(valor) {
   return euros.format(valor)
 }

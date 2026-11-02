@@ -1,51 +1,43 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { listarCategorias } from '../services/categoriaService'
 import { listarGastos } from '../services/gastoService'
-import { formatoEuros, formatoEurosCompacto, MESES } from '../utils/formato'
+import { exportarGastosExcel } from '../utils/exportarExcel'
+import { formatoEuros, formatoFecha, formatoPorcentaje, nombreMes } from '../utils/formato'
 
-const clave = (categoria) => `c${categoria.id}`
+const dosDigitos = (n) => String(n).padStart(2, '0')
 
-// Tramo de la barra apilada: separado del de abajo por un hueco y redondeado solo arriba del todo
-function Tramo({ x, y, width, height, fill, esBase, esTope }) {
-  if (!height) return null
-  const alto = esBase ? height : Math.max(height - 2, 1)
-  if (!esTope) return <rect x={x} y={y} width={width} height={alto} fill={fill} />
-  const r = Math.min(4, alto, width / 2)
-  return (
-    <path
-      d={`M${x},${y + alto} V${y + r} Q${x},${y} ${x + r},${y} H${x + width - r} Q${x + width},${y} ${x + width},${y + r} V${y + alto} Z`}
-      fill={fill}
-    />
-  )
-}
-
-function DetalleMes({ active, payload, categorias }) {
+function DetalleCategoria({ active, payload, total }) {
   const fila = payload?.[0]?.payload
-  if (!active || !fila?.total) return null
+  if (!active || !fila) return null
   return (
     <div className="grafico-detalle">
-      <strong>{fila.mes}: {formatoEuros(fila.total)}</strong>
+      <strong>{fila.nombre}</strong>
       <ul>
-        {categorias.filter((c) => fila[clave(c)]).map((c) => (
-          <li key={c.id}>
-            <span className="muestra" style={{ background: c.color }} />
-            <span>{c.nombre}</span>
-            <span className="grafico-detalle-valor">{formatoEuros(fila[clave(c)])}</span>
-          </li>
-        ))}
+        <li>
+          <span className="muestra" style={{ background: fila.color }} />
+          <span>{formatoPorcentaje(fila.total, total)}</span>
+          <span className="grafico-detalle-valor">{formatoEuros(fila.total)}</span>
+        </li>
       </ul>
     </div>
   )
 }
 
 export default function GraficoGastos({ onIrARegistro }) {
-  const anioActual = new Date().getFullYear()
-  const [anio, setAnio] = useState(anioActual)
+  const hoy = new Date()
+  const anioActual = hoy.getFullYear()
+  const mesActual = hoy.getMonth() + 1
+
+  // mes 0 significa
+  const [periodo, setPeriodo] = useState({ anio: anioActual, mes: mesActual })
   const [categorias, setCategorias] = useState([])
   const [gastos, setGastos] = useState([])
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(true)
+  const [exportando, setExportando] = useState(false)
+
+  const { anio, mes } = periodo
 
   useEffect(() => {
     let vigente = true
@@ -64,135 +56,199 @@ export default function GraficoGastos({ onIrARegistro }) {
     }
   }, [anio])
 
-  const datos = useMemo(() => {
-    const meses = MESES.map((mes) => ({ mes, total: 0 }))
-    gastos.forEach((gasto) => {
-      const fila = meses[Number(gasto.fecha.slice(5, 7)) - 1]
-      const k = `c${gasto.categoriaId}`
-      fila[k] = (fila[k] || 0) + gasto.monto
-      fila.total += gasto.monto
-    })
-    return meses
-  }, [gastos])
+  const gastosPeriodo = useMemo(() => {
+    const prefijo = mes ? `${anio}-${dosDigitos(mes)}` : `${anio}-`
+    return gastos.filter((gasto) => gasto.fecha.startsWith(prefijo))
+  }, [gastos, anio, mes])
 
-  const totalAnio = datos.reduce((suma, fila) => suma + fila.total, 0)
+  // Las categorías llegan ordenadas por prioridad, así que el círculo empieza por la más prioritaria
+  const resumen = useMemo(
+    () =>
+      categorias
+        .map((categoria) => ({
+          id: categoria.id,
+          nombre: categoria.nombre,
+          color: categoria.color,
+          total: Math.round(
+            gastosPeriodo
+              .filter((gasto) => gasto.categoriaId === categoria.id)
+              .reduce((suma, gasto) => suma + gasto.monto * 100, 0),
+          ) / 100,
+        }))
+        .filter((fila) => fila.total > 0),
+    [categorias, gastosPeriodo],
+  )
+
+  const total = resumen.reduce((suma, fila) => suma + fila.total, 0)
+
+  const gruposPorMes = useMemo(() => {
+    const grupos = new Map()
+    ;[...gastosPeriodo]
+      .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id)
+      .forEach((gasto) => {
+        const numeroMes = Number(gasto.fecha.slice(5, 7))
+        if (!grupos.has(numeroMes)) grupos.set(numeroMes, { mes: numeroMes, gastos: [], total: 0 })
+        const grupo = grupos.get(numeroMes)
+        grupo.gastos.push(gasto)
+        grupo.total += gasto.monto
+      })
+    return [...grupos.values()]
+  }, [gastosPeriodo])
+
+  const colorDe = useMemo(
+    () => Object.fromEntries(categorias.map((categoria) => [categoria.id, categoria.color])),
+    [categorias],
+  )
+
+  const etiquetaPeriodo = mes ? `${nombreMes(mes)} ${anio}` : `${anio}`
+  const esUltimoPeriodo = mes
+    ? anio * 12 + mes >= anioActual * 12 + mesActual
+    : anio >= anioActual
+
+  function mover(delta) {
+    setPeriodo(({ anio: a, mes: m }) => {
+      if (!m) return { anio: a + delta, mes: 0 }
+      const indice = a * 12 + (m - 1) + delta
+      return { anio: Math.floor(indice / 12), mes: (indice % 12) + 1 }
+    })
+  }
+
+  function cambiarModo(porMes) {
+    setPeriodo(({ anio: a }) => ({ anio: a, mes: porMes ? (a === anioActual ? mesActual : 12) : 0 }))
+  }
+
+  async function handleExportar() {
+    setError('')
+    setExportando(true)
+    try {
+      await exportarGastosExcel({
+        gastos: gastosPeriodo,
+        resumen,
+        nombreArchivo: `gastos-${anio}${mes ? `-${dosDigitos(mes)}` : ''}.xlsx`,
+      })
+    } catch {
+      setError('No se pudo crear el archivo de Excel')
+    } finally {
+      setExportando(false)
+    }
+  }
 
   return (
-    <section className="tarjeta">
-      <div className="cabecera-grafico">
-        <div>
-          <h1>Gastos mensuales</h1>
-          <p className="total-anio">{formatoEuros(totalAnio)}</p>
-          <p className="subtitle">Total de {anio}</p>
+    <>
+      <section className="tarjeta">
+        <div className="cabecera-grafico">
+          <div className="titulo-grafico">
+            <h1>Gastos por categoría</h1>
+            <button type="button" className="boton-pequeno" onClick={onIrARegistro}>
+              + Añadir gasto
+            </button>
+          </div>
+          <div className="controles-periodo">
+            <div className="modo-periodo" role="group" aria-label="Periodo">
+              <button type="button" aria-pressed={mes !== 0} onClick={() => cambiarModo(true)}>Mes</button>
+              <button type="button" aria-pressed={mes === 0} onClick={() => cambiarModo(false)}>Año</button>
+            </div>
+            <div className="selector-anio">
+              <button type="button" aria-label="Periodo anterior" onClick={() => mover(-1)}>‹</button>
+              <span className="etiqueta-periodo">{etiquetaPeriodo}</span>
+              <button
+                type="button"
+                aria-label="Periodo siguiente"
+                disabled={esUltimoPeriodo}
+                onClick={() => mover(1)}
+              >
+                ›
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="selector-anio">
-          <button type="button" aria-label="Año anterior" onClick={() => setAnio(anio - 1)}>‹</button>
-          <span>{anio}</span>
-          <button
-            type="button"
-            aria-label="Año siguiente"
-            disabled={anio >= anioActual}
-            onClick={() => setAnio(anio + 1)}
-          >
-            ›
-          </button>
-        </div>
-      </div>
 
-      {error && <div className="alert error" role="alert">{error}</div>}
+        {error && <div className="alert error" role="alert">{error}</div>}
 
-      {!error && !cargando && gastos.length === 0 && (
-        <div className="vacio">
-          <p>No hay gastos registrados en {anio}.</p>
-          <button type="button" className="link" onClick={onIrARegistro}>
-            Registrar un gasto
-          </button>
-        </div>
-      )}
+        {!error && !cargando && resumen.length === 0 && (
+          <div className="vacio">
+            <p>No hay gastos registrados en {etiquetaPeriodo}.</p>
+            <button type="button" className="link" onClick={onIrARegistro}>
+              Registrar un gasto
+            </button>
+          </div>
+        )}
 
-      {gastos.length > 0 && (
-        <>
-          <div className="grafico" style={{ opacity: cargando ? 0.5 : 1 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={datos} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="mes" tickLine={false} axisLine={{ stroke: '#d1d5db' }} tick={{ fill: '#6b7280', fontSize: 13 }} />
-                <YAxis
-                  width={64}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: '#6b7280', fontSize: 13 }}
-                  tickFormatter={formatoEurosCompacto}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(0, 0, 0, 0.04)' }}
-                  content={<DetalleMes categorias={categorias} />}
-                />
-                {/* La categoría más prioritaria queda en la base de cada barra */}
-                {categorias.map((categoria, i) => (
-                  <Bar
-                    key={categoria.id}
-                    dataKey={clave(categoria)}
-                    name={categoria.nombre}
-                    stackId="gastos"
-                    fill={categoria.color}
-                    maxBarSize={24}
+        {resumen.length > 0 && (
+          <div className="grafico-circular" style={{ opacity: cargando ? 0.5 : 1 }}>
+            <div className="grafico">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={resumen}
+                    dataKey="total"
+                    nameKey="nombre"
+                    innerRadius="68%"
+                    outerRadius="100%"
+                    paddingAngle={2}
+                    cornerRadius={4}
+                    stroke="none"
                     isAnimationActive={false}
-                    shape={(props) => (
-                      <Tramo
-                        {...props}
-                        esBase={categorias.slice(0, i).every((c) => !props.payload[clave(c)])}
-                        esTope={categorias.slice(i + 1).every((c) => !props.payload[clave(c)])}
-                      />
-                    )}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+                  >
+                    {resumen.map((fila) => (
+                      <Cell key={fila.id} fill={fila.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<DetalleCategoria total={total} />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grafico-centro">
+                <span className="grafico-centro-total">{formatoEuros(total)}</span>
+                <span className="grafico-centro-texto">{etiquetaPeriodo}</span>
+              </div>
+            </div>
+
+            <ul className="leyenda-detalle">
+              {resumen.map((fila) => (
+                <li key={fila.id}>
+                  <span className="muestra" style={{ background: fila.color }} />
+                  <span className="leyenda-nombre">{fila.nombre}</span>
+                  <span className="leyenda-porcentaje">{formatoPorcentaje(fila.total, total)}</span>
+                  <span className="leyenda-importe">{formatoEuros(fila.total)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {gastosPeriodo.length > 0 && (
+        <section className="tarjeta" style={{ opacity: cargando ? 0.5 : 1 }}>
+          <div className="cabecera-lista">
+            <h2>Gastos registrados</h2>
+            <button type="button" className="secundario" onClick={handleExportar} disabled={exportando}>
+              {exportando ? 'Exportando…' : 'Exportar a Excel'}
+            </button>
           </div>
 
-          <ul className="leyenda">
-            {categorias.map((categoria) => (
-              <li key={categoria.id}>
-                <span className="muestra" style={{ background: categoria.color }} />
-                {categoria.nombre}
-              </li>
-            ))}
-          </ul>
-
-          <details className="tabla-grafico">
-            <summary>Ver los datos en una tabla</summary>
-            <div className="tabla-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Categoría</th>
-                    {MESES.map((mes) => <th scope="col" key={mes}>{mes}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {categorias.map((categoria) => (
-                    <tr key={categoria.id}>
-                      <th scope="row">{categoria.nombre}</th>
-                      {datos.map((fila) => (
-                        <td key={fila.mes}>{fila[clave(categoria)] ? formatoEuros(fila[clave(categoria)]) : '–'}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <th scope="row">Total</th>
-                    {datos.map((fila) => (
-                      <td key={fila.mes}>{fila.total ? formatoEuros(fila.total) : '–'}</td>
-                    ))}
-                  </tr>
-                </tfoot>
-              </table>
+          {gruposPorMes.map((grupo) => (
+            <div key={grupo.mes} className="grupo-mes">
+              <h3>
+                <span>{nombreMes(grupo.mes)} {anio}</span>
+                <span className="lista-importe">{formatoEuros(grupo.total)}</span>
+              </h3>
+              <ul className="lista">
+                {grupo.gastos.map((gasto) => (
+                  <li key={gasto.id}>
+                    <time className="lista-fecha" dateTime={gasto.fecha}>{formatoFecha(gasto.fecha)}</time>
+                    <span className="muestra" style={{ background: colorDe[gasto.categoriaId] }} />
+                    <span className="lista-texto">
+                      <span>{gasto.descripcion}</span>
+                      <small>{gasto.categoria}</small>
+                    </span>
+                    <span className="lista-importe">{formatoEuros(gasto.monto)}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </details>
-        </>
+          ))}
+        </section>
       )}
-    </section>
+    </>
   )
 }

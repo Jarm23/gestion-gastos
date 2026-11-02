@@ -269,20 +269,60 @@ button.peligro {
 
 .cabecera-grafico {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
 }
 
-.total-anio {
-  margin: 0.5rem 0 0;
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.2;
+.titulo-grafico {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
 }
 
-.cabecera-grafico .subtitle {
-  margin: 0 0 1rem;
+button.boton-pequeno {
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+button.boton-pequeno:hover {
+  background: #4338ca;
+}
+
+.controles-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modo-periodo {
+  display: inline-flex;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modo-periodo button {
+  padding: 0.35rem 0.85rem;
+  border: none;
+  background: #fff;
+  color: inherit;
+}
+
+.modo-periodo button[aria-pressed='true'] {
+  background: #4f46e5;
+  color: #fff;
+  font-weight: 600;
 }
 
 .selector-anio {
@@ -291,6 +331,12 @@ button.peligro {
   gap: 0.5rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.etiqueta-periodo {
+  min-width: 8.5rem;
+  text-align: center;
+  text-transform: capitalize;
 }
 
 .selector-anio button {
@@ -306,9 +352,80 @@ button.peligro {
   cursor: default;
 }
 
-.grafico {
-  height: 340px;
+.grafico-circular {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
   transition: opacity 0.15s;
+}
+
+@media (min-width: 640px) {
+  .grafico-circular {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.grafico {
+  position: relative;
+  height: 300px;
+}
+
+.grafico-centro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.grafico-centro-total {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.grafico-centro-texto {
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.leyenda-detalle {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leyenda-detalle li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.leyenda-detalle li:first-child {
+  border-top: none;
+}
+
+.leyenda-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.leyenda-porcentaje {
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.leyenda-importe {
+  min-width: 6.5rem;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .grafico-detalle {
@@ -346,23 +463,6 @@ button.peligro {
   border-radius: 3px;
 }
 
-.leyenda {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-  margin: 1rem 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.875rem;
-  color: #4b5563;
-}
-
-.leyenda li {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 .vacio {
   padding: 2.5rem 1rem;
   text-align: center;
@@ -373,44 +473,44 @@ button.peligro {
   margin: 0 0 0.5rem;
 }
 
-.tabla-grafico {
+button.secundario {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font-weight: 500;
+}
+
+button.secundario:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+button.secundario:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.grupo-mes + .grupo-mes {
   margin-top: 1rem;
+}
+
+.grupo-mes h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.25rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 0.95rem;
+  text-transform: capitalize;
+}
+
+.lista-fecha {
+  min-width: 5.5rem;
+  color: #6b7280;
   font-size: 0.875rem;
-}
-
-.tabla-grafico summary {
-  cursor: pointer;
-  color: #4f46e5;
-  font-weight: 600;
-}
-
-.tabla-scroll {
-  margin-top: 0.5rem;
-  overflow-x: auto;
-}
-
-.tabla-scroll table {
-  border-collapse: collapse;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-
-.tabla-scroll th,
-.tabla-scroll td {
-  padding: 0.35rem 0.6rem;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: right;
-  font-weight: 400;
-}
-
-.tabla-scroll th[scope='row'] {
-  text-align: left;
-}
-
-.tabla-scroll thead th,
-.tabla-scroll tfoot th,
-.tabla-scroll tfoot td {
-  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Listas de gastos y categorías */

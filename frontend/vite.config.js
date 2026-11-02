@@ -7,7 +7,14 @@ export default defineConfig({
   server: {
     // Redirige /api al backend de Spring Boot durante el desarrollo
     proxy: {
-      '/api': 'http://localhost:8080',
+      '/api': {
+        target: 'http://localhost:8080',
+        configure: (proxy) => {
+          // Desde el móvil el navegador envía Origin con la IP del PC, y el backend solo
+          // acepta localhost. Al pasar por este proxy la petición ya es del mismo origen.
+          proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'))
+        },
+      },
     },
   },
 })

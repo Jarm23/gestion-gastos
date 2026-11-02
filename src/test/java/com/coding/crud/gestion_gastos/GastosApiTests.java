@@ -26,6 +26,18 @@ class GastosApiTests {
     private MockMvc mvc;
 
     @Test
+    void elRegistroAceptaCualquierPuertoLocalYRechazaOtrosOrigenes() throws Exception {
+        for (String origen : new String[]{"http://localhost:5173", "http://localhost:5174"}) {
+            mvc.perform(post("/api/v1/auth/registro").header("Origin", origen)
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(post("/api/v1/auth/registro").header("Origin", "http://otro-sitio.example")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void sinSesionNoSePuedeAcceder() throws Exception {
         mvc.perform(get("/api/v1/categorias")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/gastos").param("anio", "2026")).andExpect(status().isUnauthorized());
