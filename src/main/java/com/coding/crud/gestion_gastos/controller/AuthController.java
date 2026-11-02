@@ -4,6 +4,8 @@ import com.coding.crud.gestion_gastos.dto.LoginRequestDTO;
 import com.coding.crud.gestion_gastos.dto.RegistroRequestDTO;
 import com.coding.crud.gestion_gastos.dto.UsuarioDTO;
 import com.coding.crud.gestion_gastos.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +28,24 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UsuarioDTO> login(@Valid @RequestBody LoginRequestDTO request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<UsuarioDTO> login(@Valid @RequestBody LoginRequestDTO request, HttpServletRequest http) {
+        UsuarioDTO usuario = authService.login(request);
+        // Sesión nueva en cada login para evitar la fijación de sesión
+        cerrarSesion(http);
+        http.getSession(true).setAttribute(SesionUsuario.ATRIBUTO, usuario.getId());
+        return ResponseEntity.ok(usuario);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest http) {
+        cerrarSesion(http);
+        return ResponseEntity.noContent().build();
+    }
+
+    private void cerrarSesion(HttpServletRequest http) {
+        HttpSession session = http.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
     }
 }

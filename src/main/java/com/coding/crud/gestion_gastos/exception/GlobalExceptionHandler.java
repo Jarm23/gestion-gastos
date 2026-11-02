@@ -16,6 +16,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(Map.of("mensaje", ex.getMessage()));
     }
 
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Map<String, String>> handleApi(ApiException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(Map.of("mensaje", ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
         String mensaje = ex.getBindingResult().getFieldErrors().stream()

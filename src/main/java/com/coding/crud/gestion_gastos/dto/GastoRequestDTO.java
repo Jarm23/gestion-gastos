@@ -17,10 +17,11 @@ public class GastoRequestDTO {
 
     @NotNull(message = "El monto es obligatorio")
     @Positive(message = "El monto debe ser un valor positivo")
+    @Digits(integer = 10, fraction = 2, message = "El monto admite como máximo 2 decimales")
     private BigDecimal monto;
 
-    @NotBlank(message = "La categoria es obligatoria")
-    private String categoria;
+    @NotNull(message = "La categoria es obligatoria")
+    private Long categoriaId;
 
     @NotNull(message = "La fecha es obligatoria")
     @PastOrPresent(message = "La fecha no puede ser futura")

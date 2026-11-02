@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final CategoriaService categoriaService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AuthServiceImpl(UsuarioRepository usuarioRepository) {
+    public AuthServiceImpl(UsuarioRepository usuarioRepository, CategoriaService categoriaService) {
         this.usuarioRepository = usuarioRepository;
+        this.categoriaService = categoriaService;
     }
 
     @Override
@@ -39,6 +41,8 @@ public class AuthServiceImpl implements AuthService {
         Usuario usuario = usuarioRepository.findByEmailIgnoreCase(request.getEmail().trim())
                 .filter(u -> passwordEncoder.matches(request.getPassword(), u.getPassword()))
                 .orElseThrow(() -> new AuthException(HttpStatus.UNAUTHORIZED, "Email o contraseña incorrectos"));
+        // Aquí y no al registrarse, para cubrir también las cuentas que ya existían
+        categoriaService.crearPredeterminadasSiFaltan(usuario.getId());
         return toDTO(usuario);
     }
 

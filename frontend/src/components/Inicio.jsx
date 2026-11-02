@@ -1,12 +1,22 @@
+import { useState } from 'react'
+import BarraMenu from './BarraMenu'
+import GraficoGastos from './GraficoGastos'
+import Cuenta from './Cuenta'
+import RegistroGastos from './RegistroGastos'
+import Ajustes from './Ajustes'
+
 export default function Inicio({ usuario, onLogout }) {
+  const [vista, setVista] = useState('grafico')
+
   return (
-    <div className="auth-card">
-      <h1>Hola, {usuario.nombre}</h1>
-      <p className="subtitle">Has iniciado sesión como {usuario.email}</p>
-      <p>Aquí irá tu panel de gastos.</p>
-      <button type="button" className="primary" onClick={onLogout}>
-        Cerrar sesión
-      </button>
+    <div className="app">
+      <BarraMenu vista={vista} onNavegar={setVista} onLogout={onLogout} />
+      <main className="contenido">
+        {vista === 'grafico' && <GraficoGastos onIrARegistro={() => setVista('registro')} />}
+        {vista === 'cuenta' && <Cuenta usuario={usuario} />}
+        {vista === 'registro' && <RegistroGastos onIrAAjustes={() => setVista('ajustes')} />}
+        {vista === 'ajustes' && <Ajustes />}
+      </main>
     </div>
   )
 }

@@ -1,7 +1,8 @@
-#root {
-  width: 100%;
+.auth-page {
+  min-height: 100vh;
   padding: 1rem;
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -35,15 +36,25 @@ label {
   margin-bottom: 0.3rem;
 }
 
-input {
+input,
+select {
   font: inherit;
+  width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   margin-bottom: 1rem;
+  background: #fff;
 }
 
-input:focus {
+input[type='color'] {
+  height: 2.75rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+input:focus,
+select:focus {
   outline: 2px solid #4f46e5;
   border-color: transparent;
 }
@@ -105,4 +116,362 @@ button.link:hover {
 .alert.success {
   background: #f0fdf4;
   color: #15803d;
+}
+
+/* Barra y menú desplegable */
+
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.barra-titulo {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu-boton {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 500;
+}
+
+.menu-boton:hover {
+  background: #f9fafb;
+}
+
+.menu-lista {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  min-width: 190px;
+  margin: 0;
+  padding: 0.3rem;
+  list-style: none;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.menu-lista button {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+.menu-lista button:hover {
+  background: #f3f4f6;
+}
+
+.menu-lista button[aria-current='page'] {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.menu-separador {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Páginas */
+
+.contenido {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tarjeta {
+  min-width: 0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.tarjeta h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.tarjeta h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.tarjeta h1 + h2 {
+  margin-top: 1rem;
+}
+
+.tarjeta h1 + .subtitle {
+  margin-bottom: 1rem;
+}
+
+.campos-fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0 1rem;
+}
+
+.ayuda {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+button.cancelar {
+  margin-top: 0.75rem;
+}
+
+button.peligro {
+  color: #b91c1c;
+}
+
+.datos-cuenta {
+  margin: 1rem 0 0;
+}
+
+.datos-cuenta dt {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.datos-cuenta dd {
+  margin: 0 0 0.75rem;
+}
+
+/* Gráfico */
+
+.cabecera-grafico {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.total-anio {
+  margin: 0.5rem 0 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cabecera-grafico .subtitle {
+  margin: 0 0 1rem;
+}
+
+.selector-anio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.selector-anio button {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.selector-anio button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.grafico {
+  height: 340px;
+  transition: opacity 0.15s;
+}
+
+.grafico-detalle {
+  min-width: 210px;
+  padding: 0.6rem 0.75rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  font-size: 0.875rem;
+}
+
+.grafico-detalle ul {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grafico-detalle li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.grafico-detalle-valor {
+  margin-left: auto;
+  padding-left: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.muestra {
+  flex: none;
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+}
+
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vacio {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.vacio p {
+  margin: 0 0 0.5rem;
+}
+
+.tabla-grafico {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.tabla-grafico summary {
+  cursor: pointer;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.tabla-scroll {
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.tabla-scroll table {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla-scroll th,
+.tabla-scroll td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: right;
+  font-weight: 400;
+}
+
+.tabla-scroll th[scope='row'] {
+  text-align: left;
+}
+
+.tabla-scroll thead th,
+.tabla-scroll tfoot th,
+.tabla-scroll tfoot td {
+  font-weight: 600;
+}
+
+/* Listas de gastos y categorías */
+
+.cabecera-lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.cabecera-lista h2 {
+  margin: 0;
+}
+
+.cabecera-lista input {
+  width: auto;
+  margin: 0;
+}
+
+.lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.lista li:first-child {
+  border-top: none;
+}
+
+.lista-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+
+.lista-texto small {
+  color: #6b7280;
+}
+
+.lista-importe {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.prioridad {
+  width: 1.25rem;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }

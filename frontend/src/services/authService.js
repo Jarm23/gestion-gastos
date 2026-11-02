@@ -31,6 +31,7 @@ export function registrar(nombre, email, password) {
 
 export function logout() {
   localStorage.removeItem(STORAGE_KEY)
+  fetch(`${API_URL}/logout`, { method: 'POST' }).catch(() => {})
 }
 
 export function getUsuarioActual() {
