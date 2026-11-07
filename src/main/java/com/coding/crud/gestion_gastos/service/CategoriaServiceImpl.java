@@ -4,8 +4,10 @@ import com.coding.crud.gestion_gastos.dto.CategoriaDTO;
 import com.coding.crud.gestion_gastos.dto.CategoriaRequestDTO;
 import com.coding.crud.gestion_gastos.exception.ApiException;
 import com.coding.crud.gestion_gastos.model.Categoria;
+import com.coding.crud.gestion_gastos.model.Grupo;
 import com.coding.crud.gestion_gastos.repository.CategoriaRepository;
 import com.coding.crud.gestion_gastos.repository.GastoRepository;
+import com.coding.crud.gestion_gastos.repository.GrupoRepository;
 import com.coding.crud.gestion_gastos.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -32,13 +34,16 @@ public class CategoriaServiceImpl implements CategoriaService {
     private final CategoriaRepository categoriaRepository;
     private final GastoRepository gastoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final GrupoRepository grupoRepository;
 
     public CategoriaServiceImpl(CategoriaRepository categoriaRepository,
                                 GastoRepository gastoRepository,
-                                UsuarioRepository usuarioRepository) {
+                                UsuarioRepository usuarioRepository,
+                                GrupoRepository grupoRepository) {
         this.categoriaRepository = categoriaRepository;
         this.gastoRepository = gastoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.grupoRepository = grupoRepository;
     }
 
     @Override
@@ -59,6 +64,7 @@ public class CategoriaServiceImpl implements CategoriaService {
         Categoria categoria = new Categoria();
         categoria.setUsuario(usuarioRepository.getReferenceById(usuarioId));
         aplicar(categoria, nombre, request.getColor());
+        categoria.setGrupo(grupoDelUsuario(usuarioId, request.getGrupoId()));
         colocar(usuarioId, categoria, request.getPrioridad());
         return toDTO(categoria);
     }
@@ -72,6 +78,7 @@ public class CategoriaServiceImpl implements CategoriaService {
             throw new ApiException(HttpStatus.CONFLICT, "Ya tienes una categoría con ese nombre");
         }
         aplicar(categoria, nombre, request.getColor());
+        categoria.setGrupo(grupoDelUsuario(usuarioId, request.getGrupoId()));
         colocar(usuarioId, categoria, request.getPrioridad());
         return toDTO(categoria);
     }
@@ -113,6 +120,15 @@ public class CategoriaServiceImpl implements CategoriaService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Categoría no encontrada"));
     }
 
+    // El grupo tiene que ser del mismo usuario; nunca se confía en el id que manda el navegador
+    private Grupo grupoDelUsuario(Long usuarioId, Long grupoId) {
+        if (grupoId == null) {
+            return null;
+        }
+        return grupoRepository.findByIdAndUsuarioId(grupoId, usuarioId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Grupo no encontrado"));
+    }
+
     private void aplicar(Categoria categoria, String nombre, String color) {
         categoria.setNombre(nombre);
         categoria.setColor(color.toLowerCase());
@@ -134,6 +150,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     }
 
     private CategoriaDTO toDTO(Categoria c) {
-        return new CategoriaDTO(c.getId(), c.getNombre(), c.getPrioridad(), c.getColor());
+        return new CategoriaDTO(c.getId(), c.getNombre(), c.getPrioridad(), c.getColor(),
+                c.getGrupo() == null ? null : c.getGrupo().getId());
     }
 }

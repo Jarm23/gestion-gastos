@@ -1,38 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import GraficoCircular from './GraficoCircular'
 import { listarCategorias } from '../services/categoriaService'
 import { listarGastos } from '../services/gastoService'
+import { listarGrupos } from '../services/grupoService'
 import { exportarGastosExcel } from '../utils/exportarExcel'
-import { formatoEuros, formatoFecha, formatoPorcentaje, nombreMes } from '../utils/formato'
+import { formatoEuros, formatoFecha, nombreMes } from '../utils/formato'
+import { esGastosFijos, resumirGastos } from '../utils/resumen'
 
 const dosDigitos = (n) => String(n).padStart(2, '0')
-
-function DetalleCategoria({ active, payload, total }) {
-  const fila = payload?.[0]?.payload
-  if (!active || !fila) return null
-  return (
-    <div className="grafico-detalle">
-      <strong>{fila.nombre}</strong>
-      <ul>
-        <li>
-          <span className="muestra" style={{ background: fila.color }} />
-          <span>{formatoPorcentaje(fila.total, total)}</span>
-          <span className="grafico-detalle-valor">{formatoEuros(fila.total)}</span>
-        </li>
-      </ul>
-    </div>
-  )
-}
+const prefijoMes = (anio, mes) => `${anio}-${dosDigitos(mes)}`
 
 export default function GraficoGastos({ onIrARegistro }) {
   const hoy = new Date()
   const anioActual = hoy.getFullYear()
   const mesActual = hoy.getMonth() + 1
 
-  // mes 0 significa
+  // mes 0 significa el año completo
   const [periodo, setPeriodo] = useState({ anio: anioActual, mes: mesActual })
   const [categorias, setCategorias] = useState([])
+  const [grupos, setGrupos] = useState([])
   const [gastos, setGastos] = useState([])
+  // Solo hace falta pedirlos aparte cuando el gráfico principal muestra otro año
+  const [gastosAnioActual, setGastosAnioActual] = useState([])
+  const [agrupar, setAgrupar] = useState(false)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(true)
   const [exportando, setExportando] = useState(false)
@@ -41,12 +31,25 @@ export default function GraficoGastos({ onIrARegistro }) {
 
   useEffect(() => {
     let vigente = true
-    setCargando(true)
-    Promise.all([listarCategorias(), listarGastos(anio)])
-      .then(([listaCategorias, listaGastos]) => {
+    Promise.all([listarCategorias(), listarGrupos()])
+      .then(([listaCategorias, listaGrupos]) => {
         if (!vigente) return
         setCategorias(listaCategorias)
-        setGastos(listaGastos)
+        setGrupos(listaGrupos)
+      })
+      .catch((err) => vigente && setError(err.message))
+    return () => {
+      vigente = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let vigente = true
+    setCargando(true)
+    listarGastos(anio)
+      .then((lista) => {
+        if (!vigente) return
+        setGastos(lista)
         setError('')
       })
       .catch((err) => vigente && setError(err.message))
@@ -56,43 +59,49 @@ export default function GraficoGastos({ onIrARegistro }) {
     }
   }, [anio])
 
+  useEffect(() => {
+    if (anio === anioActual) return undefined
+    let vigente = true
+    listarGastos(anioActual)
+      .then((lista) => vigente && setGastosAnioActual(lista))
+      .catch((err) => vigente && setError(err.message))
+    return () => {
+      vigente = false
+    }
+  }, [anio, anioActual])
+
   const gastosPeriodo = useMemo(() => {
-    const prefijo = mes ? `${anio}-${dosDigitos(mes)}` : `${anio}-`
+    const prefijo = mes ? prefijoMes(anio, mes) : `${anio}-`
     return gastos.filter((gasto) => gasto.fecha.startsWith(prefijo))
   }, [gastos, anio, mes])
 
   // Las categorías llegan ordenadas por prioridad, así que el círculo empieza por la más prioritaria
   const resumen = useMemo(
-    () =>
-      categorias
-        .map((categoria) => ({
-          id: categoria.id,
-          nombre: categoria.nombre,
-          color: categoria.color,
-          total: Math.round(
-            gastosPeriodo
-              .filter((gasto) => gasto.categoriaId === categoria.id)
-              .reduce((suma, gasto) => suma + gasto.monto * 100, 0),
-          ) / 100,
-        }))
-        .filter((fila) => fila.total > 0),
-    [categorias, gastosPeriodo],
+    () => resumirGastos({ gastos: gastosPeriodo, categorias, grupos, agrupar }),
+    [gastosPeriodo, categorias, grupos, agrupar],
   )
 
-  const total = resumen.reduce((suma, fila) => suma + fila.total, 0)
+  // Segundo gráfico: el mes en curso sin la categoría Gastos Fijos
+  const categoriasVariables = useMemo(() => categorias.filter((c) => !esGastosFijos(c)), [categorias])
+  const hayGastosFijos = categoriasVariables.length < categorias.length
+  const resumenMesVariable = useMemo(() => {
+    const prefijo = prefijoMes(anioActual, mesActual)
+    const delMes = (anio === anioActual ? gastos : gastosAnioActual).filter((g) => g.fecha.startsWith(prefijo))
+    return resumirGastos({ gastos: delMes, categorias: categoriasVariables, grupos, agrupar })
+  }, [anio, anioActual, mesActual, gastos, gastosAnioActual, categoriasVariables, grupos, agrupar])
 
   const gruposPorMes = useMemo(() => {
-    const grupos = new Map()
+    const porMes = new Map()
     ;[...gastosPeriodo]
       .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id)
       .forEach((gasto) => {
         const numeroMes = Number(gasto.fecha.slice(5, 7))
-        if (!grupos.has(numeroMes)) grupos.set(numeroMes, { mes: numeroMes, gastos: [], total: 0 })
-        const grupo = grupos.get(numeroMes)
-        grupo.gastos.push(gasto)
-        grupo.total += gasto.monto
+        if (!porMes.has(numeroMes)) porMes.set(numeroMes, { mes: numeroMes, gastos: [], total: 0 })
+        const bloque = porMes.get(numeroMes)
+        bloque.gastos.push(gasto)
+        bloque.total += gasto.monto
       })
-    return [...grupos.values()]
+    return [...porMes.values()]
   }, [gastosPeriodo])
 
   const colorDe = useMemo(
@@ -101,6 +110,7 @@ export default function GraficoGastos({ onIrARegistro }) {
   )
 
   const etiquetaPeriodo = mes ? `${nombreMes(mes)} ${anio}` : `${anio}`
+  const etiquetaMesActual = `${nombreMes(mesActual)} ${anioActual}`
   const esUltimoPeriodo = mes
     ? anio * 12 + mes >= anioActual * 12 + mesActual
     : anio >= anioActual
@@ -123,7 +133,8 @@ export default function GraficoGastos({ onIrARegistro }) {
     try {
       await exportarGastosExcel({
         gastos: gastosPeriodo,
-        resumen,
+        // El Excel siempre resume por categoría, aunque el gráfico esté agrupado
+        resumen: resumirGastos({ gastos: gastosPeriodo, categorias }),
         nombreArchivo: `gastos-${anio}${mes ? `-${dosDigitos(mes)}` : ''}.xlsx`,
       })
     } catch {
@@ -138,12 +149,18 @@ export default function GraficoGastos({ onIrARegistro }) {
       <section className="tarjeta">
         <div className="cabecera-grafico">
           <div className="titulo-grafico">
-            <h1>Gastos por categoría</h1>
+            <h1>{agrupar ? 'Gastos por grupo' : 'Gastos por categoría'}</h1>
             <button type="button" className="boton-pequeno" onClick={onIrARegistro}>
               + Añadir gasto
             </button>
           </div>
           <div className="controles-periodo">
+            {grupos.length > 0 && (
+              <div className="modo-periodo" role="group" aria-label="Ver por">
+                <button type="button" aria-pressed={!agrupar} onClick={() => setAgrupar(false)}>Categorías</button>
+                <button type="button" aria-pressed={agrupar} onClick={() => setAgrupar(true)}>Grupos</button>
+              </div>
+            )}
             <div className="modo-periodo" role="group" aria-label="Periodo">
               <button type="button" aria-pressed={mes !== 0} onClick={() => cambiarModo(true)}>Mes</button>
               <button type="button" aria-pressed={mes === 0} onClick={() => cambiarModo(false)}>Año</button>
@@ -174,46 +191,24 @@ export default function GraficoGastos({ onIrARegistro }) {
           </div>
         )}
 
-        {resumen.length > 0 && (
-          <div className="grafico-circular" style={{ opacity: cargando ? 0.5 : 1 }}>
-            <div className="grafico">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={resumen}
-                    dataKey="total"
-                    nameKey="nombre"
-                    innerRadius="68%"
-                    outerRadius="100%"
-                    paddingAngle={2}
-                    cornerRadius={4}
-                    stroke="none"
-                    isAnimationActive={false}
-                  >
-                    {resumen.map((fila) => (
-                      <Cell key={fila.id} fill={fila.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<DetalleCategoria total={total} />} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="grafico-centro">
-                <span className="grafico-centro-total">{formatoEuros(total)}</span>
-                <span className="grafico-centro-texto">{etiquetaPeriodo}</span>
-              </div>
-            </div>
+        {resumen.length > 0 && <GraficoCircular resumen={resumen} etiqueta={etiquetaPeriodo} atenuado={cargando} />}
+      </section>
 
-            <ul className="leyenda-detalle">
-              {resumen.map((fila) => (
-                <li key={fila.id}>
-                  <span className="muestra" style={{ background: fila.color }} />
-                  <span className="leyenda-nombre">{fila.nombre}</span>
-                  <span className="leyenda-porcentaje">{formatoPorcentaje(fila.total, total)}</span>
-                  <span className="leyenda-importe">{formatoEuros(fila.total)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <section className="tarjeta">
+        <h2>Este mes sin Gastos Fijos</h2>
+        <p className="ayuda">
+          {hayGastosFijos
+            ? `Lo que llevas gastado en ${etiquetaMesActual} además de los gastos fijos.`
+            : 'No tienes una categoría llamada "Gastos Fijos", así que se muestra todo el mes.'}
+        </p>
+        {resumenMesVariable.length > 0 ? (
+          <GraficoCircular resumen={resumenMesVariable} etiqueta={etiquetaMesActual} />
+        ) : (
+          !cargando && (
+            <div className="vacio">
+              <p>Aún no hay gastos fuera de Gastos Fijos en {etiquetaMesActual}.</p>
+            </div>
+          )
         )}
       </section>
 
@@ -226,14 +221,14 @@ export default function GraficoGastos({ onIrARegistro }) {
             </button>
           </div>
 
-          {gruposPorMes.map((grupo) => (
-            <div key={grupo.mes} className="grupo-mes">
+          {gruposPorMes.map((bloque) => (
+            <div key={bloque.mes} className="grupo-mes">
               <h3>
-                <span>{nombreMes(grupo.mes)} {anio}</span>
-                <span className="lista-importe">{formatoEuros(grupo.total)}</span>
+                <span>{nombreMes(bloque.mes)} {anio}</span>
+                <span className="lista-importe">{formatoEuros(bloque.total)}</span>
               </h3>
               <ul className="lista">
-                {grupo.gastos.map((gasto) => (
+                {bloque.gastos.map((gasto) => (
                   <li key={gasto.id}>
                     <time className="lista-fecha" dateTime={gasto.fecha}>{formatoFecha(gasto.fecha)}</time>
                     <span className="muestra" style={{ background: colorDe[gasto.categoriaId] }} />

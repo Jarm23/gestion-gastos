@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 const OPCIONES = [
   { vista: 'cuenta', texto: 'Cuenta' },
   { vista: 'registro', texto: 'Registro Gastos' },
+  { vista: 'importar', texto: 'Importar Excel' },
   { vista: 'ajustes', texto: 'Ajustes' },
 ]
 

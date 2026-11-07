@@ -17,4 +17,7 @@ public class CategoriaRequestDTO {
     @NotNull(message = "El color es obligatorio")
     @Pattern(regexp = "^#[0-9a-fA-F]{6}$", message = "El color no es válido")
     private String color;
+
+    // Opcional: sin valor, la categoría queda fuera de cualquier grupo
+    private Long grupoId;
 }

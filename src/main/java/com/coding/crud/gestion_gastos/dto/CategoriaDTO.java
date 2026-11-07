@@ -10,4 +10,6 @@ public class CategoriaDTO {
     private String nombre;
     private int prioridad;
     private String color;
+    // null si la categoría no pertenece a ningún grupo
+    private Long grupoId;
 }

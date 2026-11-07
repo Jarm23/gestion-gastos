@@ -8,5 +8,6 @@ import java.util.List;
 public interface GastoService {
     List<GastoDTO> listarPorAnio(Long usuarioId, int anio);
     GastoDTO crear(Long usuarioId, GastoRequestDTO request);
+    List<GastoDTO> importar(Long usuarioId, List<GastoRequestDTO> gastos);
     void eliminar(Long usuarioId, Long id);
 }

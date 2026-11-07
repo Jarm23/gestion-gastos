@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { login } from '../services/authService'
 
-export default function Login({ onLogin, onIrARegistro, mensajeInicial }) {
+export default function Login({ onLogin, onIrARegistro, onIrARecuperar, mensajeInicial }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -49,6 +49,12 @@ export default function Login({ onLogin, onIrARegistro, mensajeInicial }) {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        <p className="olvido">
+          <button type="button" className="link" onClick={onIrARecuperar}>
+            ¿Olvidaste tu contraseña?
+          </button>
+        </p>
 
         <button type="submit" className="primary" disabled={cargando}>
           {cargando ? 'Entrando…' : 'Iniciar sesión'}

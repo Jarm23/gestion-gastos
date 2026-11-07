@@ -29,6 +29,14 @@ export function registrar(nombre, email, password) {
   return post('/registro', { nombre, email, password })
 }
 
+export function solicitarRecuperacion(email) {
+  return post('/recuperar', { email })
+}
+
+export function restablecerPassword(token, password) {
+  return post('/restablecer', { token, password })
+}
+
 export function logout() {
   localStorage.removeItem(STORAGE_KEY)
   fetch(`${API_URL}/logout`, { method: 'POST' }).catch(() => {})

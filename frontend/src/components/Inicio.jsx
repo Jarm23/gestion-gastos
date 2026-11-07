@@ -4,6 +4,7 @@ import GraficoGastos from './GraficoGastos'
 import Cuenta from './Cuenta'
 import RegistroGastos from './RegistroGastos'
 import Ajustes from './Ajustes'
+import Importar from './Importar'
 
 export default function Inicio({ usuario, onLogout }) {
   const [vista, setVista] = useState('grafico')
@@ -15,6 +16,7 @@ export default function Inicio({ usuario, onLogout }) {
         {vista === 'grafico' && <GraficoGastos onIrARegistro={() => setVista('registro')} />}
         {vista === 'cuenta' && <Cuenta usuario={usuario} />}
         {vista === 'registro' && <RegistroGastos onIrAAjustes={() => setVista('ajustes')} />}
+        {vista === 'importar' && <Importar onIrAGrafico={() => setVista('grafico')} />}
         {vista === 'ajustes' && <Ajustes />}
       </main>
     </div>

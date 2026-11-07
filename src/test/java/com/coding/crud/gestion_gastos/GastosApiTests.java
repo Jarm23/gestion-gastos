@@ -27,12 +27,12 @@ class GastosApiTests {
 
     @Test
     void elRegistroAceptaCualquierPuertoLocalYRechazaOtrosOrigenes() throws Exception {
-        for (String origen : new String[]{"http://localhost:5173", "http://localhost:5174"}) {
+        for (String origen : new String[]{"https://localhost:5173", "https://localhost:5174"}) {
             mvc.perform(post("/api/v1/auth/registro").header("Origin", origen)
                             .contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isBadRequest());
         }
-        mvc.perform(post("/api/v1/auth/registro").header("Origin", "http://otro-sitio.example")
+        mvc.perform(post("/api/v1/auth/registro").header("Origin", "https://otro-sitio.example")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
     }

@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Certificados TLS locales (no subir la clave privada) ###
+certs/

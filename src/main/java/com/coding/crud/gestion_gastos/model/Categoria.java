@@ -24,6 +24,13 @@ public class Categoria {
     @Column(nullable = false, length = 7)
     private String color;
 
+    // Opcional: varias categorías pueden sumarse en un mismo grupo en el gráfico
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grupo_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Grupo grupo;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false)
     @ToString.Exclude
